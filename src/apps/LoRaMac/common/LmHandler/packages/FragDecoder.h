@@ -36,25 +36,25 @@ extern "C" {
 #define FRAG_DECODER_FILE_HANDLING_NEW_API          1
 
 /*!
- * Maximum number of fragment that can be handled.
+ * Maximum number of fragment that can be handled. (should match with flash partition size)
  *
  * \remark This parameter has an impact on the memory footprint.
  */
-#define FRAG_MAX_NB                                 21
+#define FRAG_MAX_NB                                 (108 * 1024 / FRAG_MAX_SIZE)
 
 /*!
  * Maximum fragment size that can be handled.
  *
- * \remark This parameter has an impact on the memory footprint.
+ * \remark This parameter has an impact on the memory footprint. (must be a multiple of 8 for STM32WL)
  */
-#define FRAG_MAX_SIZE                               50
+#define FRAG_MAX_SIZE                               100
 
 /*!
  * Maximum number of extra frames that can be handled.
  *
  * \remark This parameter has an impact on the memory footprint.
  */
-#define FRAG_MAX_REDUNDANCY                         5
+#define FRAG_MAX_REDUNDANCY                         FRAG_MAX_NB / 10
 
 #define FRAG_SESSION_FINISHED                       ( int32_t )0
 #define FRAG_SESSION_NOT_STARTED                    ( int32_t )-2
@@ -77,7 +77,7 @@ typedef struct sFragDecoderCallbacks
      * \param [IN] addr Address start index to write to.
      * \param [IN] data Data buffer to be written.
      * \param [IN] size Size of data buffer to be written.
-     * 
+     *
      * \retval status Write operation status [0: Success, -1 Fail]
      */
     int8_t ( *FragDecoderWrite )( uint32_t addr, uint8_t *data, uint32_t size );
@@ -87,7 +87,7 @@ typedef struct sFragDecoderCallbacks
      * \param [IN] addr Address start index to read from.
      * \param [IN] data Data buffer to be read.
      * \param [IN] size Size of data buffer to be read.
-     * 
+     *
      * \retval status Read operation status [0: Success, -1 Fail]
      */
     int8_t ( *FragDecoderRead )( uint32_t addr, uint8_t *data, uint32_t size );
@@ -118,7 +118,7 @@ void FragDecoderInit( uint16_t fragNb, uint8_t fragSize, uint8_t *file, uint32_t
 #if( FRAG_DECODER_FILE_HANDLING_NEW_API == 1 )
 /*!
  * \brief Gets the maximum file size that can be received
- * 
+ *
  * \retval size FileSize
  */
 uint32_t FragDecoderGetMaxFileSize( void );
@@ -127,7 +127,7 @@ uint32_t FragDecoderGetMaxFileSize( void );
 /*!
  * \brief Function to decode and reconstruct the binary file
  *        Called for each receive frame
- * 
+ *
  * \param [IN] fragCounter Fragment counter [1..(FragDecoder.FragNb + FragDecoder.Redundancy)]
  * \param [IN] rawData     Pointer to the fragment to be processed (length = FragDecoder.FragSize)
  *
@@ -139,7 +139,7 @@ int32_t FragDecoderProcess( uint16_t fragCounter, uint8_t *rawData );
 
 /*!
  * \brief Gets the current fragmentation status
- * 
+ *
  * \retval status Fragmentation decoder status
  */
 FragDecoderStatus_t FragDecoderGetStatus( void );
