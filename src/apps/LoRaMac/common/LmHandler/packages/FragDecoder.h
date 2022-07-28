@@ -47,7 +47,7 @@ extern "C" {
  *
  * \remark This parameter has an impact on the memory footprint. (must be a multiple of 8 for STM32WL)
  */
-#define FRAG_MAX_SIZE                               100
+#define FRAG_MAX_SIZE                               200
 
 /*!
  * Maximum number of extra frames that can be handled.
