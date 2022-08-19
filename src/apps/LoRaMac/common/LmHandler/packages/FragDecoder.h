@@ -29,6 +29,14 @@ extern "C" {
 
 #include <stdint.h>
 
+#ifndef CONFIG_LORAWAN_FUOTA_MAX_FRAG_SIZE
+#define CONFIG_LORAWAN_FUOTA_MAX_FRAG_SIZE CONFIG_LORAWAN_FUOTA_FRAG_SIZE
+#endif
+
+#ifndef CONFIG_LORAWAN_FUOTA_MIN_FRAG_SIZE
+#define CONFIG_LORAWAN_FUOTA_MIN_FRAG_SIZE CONFIG_LORAWAN_FUOTA_FRAG_SIZE
+#endif
+
 /*!
  * If set to 1 the new API defining \ref FragDecoderWrite and
  * \ref FragDecoderReadfunction callbacks is used.
@@ -42,7 +50,7 @@ extern "C" {
  */
 #ifdef __ZEPHYR__ 
 #define FRAG_MAX_NB \
-    (CONFIG_LORAWAN_FUOTA_IMAGE_SIZE / CONFIG_LORAWAN_FUOTA_FRAG_SIZE + 1)
+    (CONFIG_LORAWAN_FUOTA_IMAGE_SIZE / CONFIG_LORAWAN_FUOTA_MIN_FRAG_SIZE + 1)
 #else
 #define FRAG_MAX_NB                                 21
 #endif
@@ -53,7 +61,7 @@ extern "C" {
  * \remark This parameter has an impact on the memory footprint.
  */
 #ifdef __ZEPHYR__ 
-#define FRAG_MAX_SIZE CONFIG_LORAWAN_FUOTA_FRAG_SIZE
+#define FRAG_MAX_SIZE CONFIG_LORAWAN_FUOTA_MAX_FRAG_SIZE
 #else
 #define FRAG_MAX_SIZE                               50
 #endif
