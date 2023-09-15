@@ -30,6 +30,8 @@
 #include "sx126x-board.h"
 #include "board.h"
 
+#include <zephyr/kernel.h>
+#include "hm-srt-operational-data-report.h"
 /*!
  * \brief Initializes the radio
  *
@@ -491,6 +493,13 @@ SX126x_t SX126x;
 TimerEvent_t TxTimeoutTimer;
 TimerEvent_t RxTimeoutTimer;
 
+/**
+ * using the zephyr kernel timers for accuracy
+ */
+static uint64_t TxKernelTimer;
+static uint64_t RxKernelTimer;
+
+static uint64_t TxBytes;
 /*!
  * Returns the known FSK bandwidth registers value
  *
@@ -1042,8 +1051,10 @@ void RadioSend( uint8_t *buffer, uint8_t size )
     SX126xSetPacketParams( &SX126x.PacketParams );
 
     SX126xSendPayload( buffer, size, 0 );
+    TxBytes = size;
     TimerSetValue( &TxTimeoutTimer, TxTimeout );
     TimerStart( &TxTimeoutTimer );
+    TxKernelTimer = k_uptime_get();
 }
 
 void RadioSleep( void )
@@ -1072,6 +1083,7 @@ void RadioRx( uint32_t timeout )
     {
         TimerSetValue( &RxTimeoutTimer, timeout );
         TimerStart( &RxTimeoutTimer );
+        RxKernelTimer = k_uptime_get();
     }
 
     if( RxContinuous == true )
@@ -1095,6 +1107,7 @@ void RadioRxBoosted( uint32_t timeout )
     {
         TimerSetValue( &RxTimeoutTimer, timeout );
         TimerStart( &RxTimeoutTimer );
+        RxKernelTimer = k_uptime_get();
     }
 
     if( RxContinuous == true )
@@ -1158,6 +1171,7 @@ void RadioSetTxContinuousWave( uint32_t freq, int8_t power, uint16_t time )
 
     TimerSetValue( &TxTimeoutTimer, timeout );
     TimerStart( &TxTimeoutTimer );
+    TxKernelTimer = k_uptime_get();
 }
 
 int16_t RadioRssi( RadioModems_t modem )
@@ -1271,6 +1285,11 @@ void RadioIrqProcess( void )
         if( ( irqRegs & IRQ_TX_DONE ) == IRQ_TX_DONE )
         {
             TimerStop( &TxTimeoutTimer );
+            
+            // This is the Tx Transmit Time
+            hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(TxBytes, false);
+            hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
+
             //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
             SX126xSetOperatingMode( MODE_STDBY_RC );
             if( ( RadioEvents != NULL ) && ( RadioEvents->TxDone != NULL ) )
@@ -1294,6 +1313,7 @@ void RadioIrqProcess( void )
                 {
                     RadioEvents->RxError( );
                 }
+                hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
             }
             else
             {
@@ -1311,6 +1331,8 @@ void RadioIrqProcess( void )
                 }
                 SX126xGetPayload( RadioRxPayload, &size , 255 );
                 SX126xGetPacketStatus( &RadioPktStatus );
+                hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
+                hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(size, true);
                 if( ( RadioEvents != NULL ) && ( RadioEvents->RxDone != NULL ) )
                 {
                     RadioEvents->RxDone( RadioRxPayload, size, RadioPktStatus.Params.LoRa.RssiPkt, RadioPktStatus.Params.LoRa.SnrPkt );
@@ -1326,6 +1348,7 @@ void RadioIrqProcess( void )
             {
                 RadioEvents->CadDone( ( ( irqRegs & IRQ_CAD_ACTIVITY_DETECTED ) == IRQ_CAD_ACTIVITY_DETECTED ) );
             }
+            hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
         }
 
         if( ( irqRegs & IRQ_RX_TX_TIMEOUT ) == IRQ_RX_TX_TIMEOUT )
@@ -1333,6 +1356,9 @@ void RadioIrqProcess( void )
             if( SX126xGetOperatingMode( ) == MODE_TX )
             {
                 TimerStop( &TxTimeoutTimer );
+                
+                // This is the Tx Transmit Time
+                hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->TxTimeout != NULL ) )
@@ -1343,6 +1369,8 @@ void RadioIrqProcess( void )
             else if( SX126xGetOperatingMode( ) == MODE_RX )
             {
                 TimerStop( &RxTimeoutTimer );
+                
+                hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->RxTimeout != NULL ) )
@@ -1370,6 +1398,8 @@ void RadioIrqProcess( void )
         if( ( irqRegs & IRQ_HEADER_ERROR ) == IRQ_HEADER_ERROR )
         {
             TimerStop( &RxTimeoutTimer );
+
+            hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
             if( RxContinuous == false )
             {
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
