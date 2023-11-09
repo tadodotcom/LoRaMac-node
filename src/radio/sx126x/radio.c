@@ -1049,7 +1049,7 @@ void RadioSend( uint8_t *buffer, uint8_t size )
     else
     {
         SX126x.PacketParams.Params.Gfsk.PayloadLength = size;
-    } 
+    }
     SX126xSetPacketParams( &SX126x.PacketParams );
 
     SX126xSendPayload( buffer, size, 0 );
@@ -1290,7 +1290,6 @@ void RadioIrqProcess( void )
             // This is the Tx Transmit Time
             hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(TxBytes, false);
             hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
-            set_gpio(false);
             //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
             SX126xSetOperatingMode( MODE_STDBY_RC );
             if( ( RadioEvents != NULL ) && ( RadioEvents->TxDone != NULL ) )
@@ -1315,7 +1314,6 @@ void RadioIrqProcess( void )
                     RadioEvents->RxError( );
                 }
                 hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
-                set_gpio(false);
             }
             else
             {
@@ -1338,7 +1336,6 @@ void RadioIrqProcess( void )
                     RadioEvents->RxDone( RadioRxPayload, size, RadioPktStatus.Params.LoRa.RssiPkt, RadioPktStatus.Params.LoRa.SnrPkt );
                     hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
                     hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(size, true);
-                    set_gpio(false);
                 }
             }
         }
@@ -1352,7 +1349,6 @@ void RadioIrqProcess( void )
                 RadioEvents->CadDone( ( ( irqRegs & IRQ_CAD_ACTIVITY_DETECTED ) == IRQ_CAD_ACTIVITY_DETECTED ) );
             }
             hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
-            set_gpio(false);
         }
 
         if( ( irqRegs & IRQ_RX_TX_TIMEOUT ) == IRQ_RX_TX_TIMEOUT )
@@ -1368,7 +1364,6 @@ void RadioIrqProcess( void )
                     RadioEvents->TxTimeout( );
                     // This is the Tx Transmit Time
                     hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
-                    set_gpio(false);
                 }
             }
             else if( SX126xGetOperatingMode( ) == MODE_RX )
@@ -1381,7 +1376,6 @@ void RadioIrqProcess( void )
                 {
                     RadioEvents->RxTimeout( );
                     hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
-                    set_gpio(false);
                 }
             }
         }
@@ -1405,7 +1399,6 @@ void RadioIrqProcess( void )
         {
             TimerStop( &RxTimeoutTimer );
             hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
-            set_gpio(false);
             if( RxContinuous == false )
             {
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
@@ -1421,12 +1414,10 @@ void RadioIrqProcess( void )
 
 void start_rx_timer(void)
 {
-    set_gpio(true);
     RxKernelTimer = k_uptime_get();
 }
 
 static void start_tx_timer(void)
 {
-    set_gpio(true);
     TxKernelTimer = k_uptime_get();
 }
