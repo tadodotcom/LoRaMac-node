@@ -3136,6 +3136,7 @@ static bool IsReJoin0Required( )
  */
 static void RxWindowSetup( TimerEvent_t* rxTimer, RxConfigParams_t* rxConfig )
 {
+    start_rx_timer();
     TimerStop( rxTimer );
 
     // Ensure the radio is Idle
