@@ -499,6 +499,8 @@ TimerEvent_t RxTimeoutTimer;
 static uint64_t TxKernelTimer;
 static uint64_t RxKernelTimer;
 
+static void start_tx_timer(void);
+
 static uint64_t TxBytes;
 /*!
  * Returns the known FSK bandwidth registers value
@@ -1051,10 +1053,10 @@ void RadioSend( uint8_t *buffer, uint8_t size )
     SX126xSetPacketParams( &SX126x.PacketParams );
 
     SX126xSendPayload( buffer, size, 0 );
+    start_tx_timer();
     TxBytes = size;
     TimerSetValue( &TxTimeoutTimer, TxTimeout );
     TimerStart( &TxTimeoutTimer );
-    TxKernelTimer = k_uptime_get();
 }
 
 void RadioSleep( void )
@@ -1083,7 +1085,6 @@ void RadioRx( uint32_t timeout )
     {
         TimerSetValue( &RxTimeoutTimer, timeout );
         TimerStart( &RxTimeoutTimer );
-        RxKernelTimer = k_uptime_get();
     }
 
     if( RxContinuous == true )
@@ -1105,9 +1106,9 @@ void RadioRxBoosted( uint32_t timeout )
 
     if( timeout != 0 )
     {
+        start_rx_timer();
         TimerSetValue( &RxTimeoutTimer, timeout );
         TimerStart( &RxTimeoutTimer );
-        RxKernelTimer = k_uptime_get();
     }
 
     if( RxContinuous == true )
@@ -1289,7 +1290,6 @@ void RadioIrqProcess( void )
             // This is the Tx Transmit Time
             hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(TxBytes, false);
             hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
-
             //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
             SX126xSetOperatingMode( MODE_STDBY_RC );
             if( ( RadioEvents != NULL ) && ( RadioEvents->TxDone != NULL ) )
@@ -1331,11 +1331,11 @@ void RadioIrqProcess( void )
                 }
                 SX126xGetPayload( RadioRxPayload, &size , 255 );
                 SX126xGetPacketStatus( &RadioPktStatus );
-                hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
-                hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(size, true);
                 if( ( RadioEvents != NULL ) && ( RadioEvents->RxDone != NULL ) )
                 {
                     RadioEvents->RxDone( RadioRxPayload, size, RadioPktStatus.Params.LoRa.RssiPkt, RadioPktStatus.Params.LoRa.SnrPkt );
+                    hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
+                    hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(size, true);
                 }
             }
         }
@@ -1357,25 +1357,25 @@ void RadioIrqProcess( void )
             {
                 TimerStop( &TxTimeoutTimer );
                 
-                // This is the Tx Transmit Time
-                hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->TxTimeout != NULL ) )
                 {
                     RadioEvents->TxTimeout( );
+                    // This is the Tx Transmit Time
+                    hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
                 }
             }
             else if( SX126xGetOperatingMode( ) == MODE_RX )
             {
                 TimerStop( &RxTimeoutTimer );
                 
-                hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->RxTimeout != NULL ) )
                 {
                     RadioEvents->RxTimeout( );
+                    hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
                 }
             }
         }
@@ -1398,7 +1398,6 @@ void RadioIrqProcess( void )
         if( ( irqRegs & IRQ_HEADER_ERROR ) == IRQ_HEADER_ERROR )
         {
             TimerStop( &RxTimeoutTimer );
-
             hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - RxKernelTimer, true);
             if( RxContinuous == false )
             {
@@ -1411,4 +1410,14 @@ void RadioIrqProcess( void )
             }
         }
     }
+}
+
+void start_rx_timer(void)
+{
+    RxKernelTimer = k_uptime_get();
+}
+
+static void start_tx_timer(void)
+{
+    TxKernelTimer = k_uptime_get();
 }
