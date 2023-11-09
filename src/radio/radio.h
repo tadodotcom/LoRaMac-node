@@ -402,6 +402,7 @@ struct Radio_s
     void ( *SetRxDutyCycle ) ( uint32_t rxTime, uint32_t sleepTime );
 };
 
+void start_rx_timer(void);
 /*!
  * \brief Radio driver
  *
