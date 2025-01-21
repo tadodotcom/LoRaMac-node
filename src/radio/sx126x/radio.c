@@ -1294,6 +1294,7 @@ void RadioIrqProcess( void )
             hm_srt_operational_data_report_accumulate_radio_msg_stats_in_cache(TxBytes, false);
             hm_srt_operational_data_report_accumulate_radio_air_times_in_cache(k_uptime_get() - TxKernelTimer, false);
             //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+			SX126xCheckDeviceReady();
             SX126xSetOperatingMode( MODE_STDBY_RC );
             if( ( RadioEvents != NULL ) && ( RadioEvents->TxDone != NULL ) )
             {
@@ -1310,6 +1311,7 @@ void RadioIrqProcess( void )
                 if( RxContinuous == false )
                 {
                     //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+					SX126xCheckDeviceReady();
                     SX126xSetOperatingMode( MODE_STDBY_RC );
                 }
                 if( ( RadioEvents != NULL ) && ( RadioEvents->RxError ) )
@@ -1325,6 +1327,7 @@ void RadioIrqProcess( void )
                 if( RxContinuous == false )
                 {
                     //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+					SX126xCheckDeviceReady();
                     SX126xSetOperatingMode( MODE_STDBY_RC );
 
                     // WORKAROUND - Implicit Header Mode Timeout Behavior, see DS_SX1261-2_V1.2 datasheet chapter 15.3
@@ -1346,6 +1349,7 @@ void RadioIrqProcess( void )
         if( ( irqRegs & IRQ_CAD_DONE ) == IRQ_CAD_DONE )
         {
             //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+			SX126xCheckDeviceReady();
             SX126xSetOperatingMode( MODE_STDBY_RC );
             if( ( RadioEvents != NULL ) && ( RadioEvents->CadDone != NULL ) )
             {
@@ -1361,6 +1365,7 @@ void RadioIrqProcess( void )
                 TimerStop( &TxTimeoutTimer );
                 
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+				SX126xCheckDeviceReady();
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->TxTimeout != NULL ) )
                 {
@@ -1374,6 +1379,7 @@ void RadioIrqProcess( void )
                 TimerStop( &RxTimeoutTimer );
                 
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+				SX126xCheckDeviceReady();
                 SX126xSetOperatingMode( MODE_STDBY_RC );
                 if( ( RadioEvents != NULL ) && ( RadioEvents->RxTimeout != NULL ) )
                 {
@@ -1404,6 +1410,7 @@ void RadioIrqProcess( void )
             if( RxContinuous == false )
             {
                 //!< Update operating mode state to a value lower than \ref MODE_STDBY_XOSC
+				SX126xCheckDeviceReady();
                 SX126xSetOperatingMode( MODE_STDBY_RC );
             }
             if( ( RadioEvents != NULL ) && ( RadioEvents->RxTimeout != NULL ) )
