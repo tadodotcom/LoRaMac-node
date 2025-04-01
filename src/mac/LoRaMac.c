@@ -128,6 +128,7 @@ typedef struct sLoRaMacCtx
     * Buffer containing the upper layer data.
     */
     uint8_t RxPayload[LORAMAC_PHY_MAXPAYLOAD];
+	uint8_t guard[64];
     SysTime_t LastTxSysTime;
     /*
     * LoRaMac internal state
@@ -275,6 +276,8 @@ typedef struct sLoRaMacCtx
  * Module context.
  */
 static LoRaMacCtx_t MacCtx;
+
+uint8_t *get_mac_guard(void) {return &MacCtx.guard;}
 
 static LoRaMacNvmData_t Nvm;
 
